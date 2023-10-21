@@ -2,15 +2,17 @@ import SwiftUI
 import AVFoundation
 import Vision
 import CoreImage
+import Foundation
 
 struct ContentView: View {
-    @State private var isCameraOpen = false
+    @State private var cam_open = false
     @State private var image: UIImage?
     @State private var barcode: UIImage?
     @State private var selected_index = 0
     @State private var recognizedTexts = [String]()
-    @State private var selectedText: String = ""
-    @State private var isImageVisible = false
+    @State private var selected_text: String = ""
+    @State private var img_visible = false
+    @State private var scale_effect = 0.5
 
     var body: some View {
         NavigationView {
@@ -18,41 +20,43 @@ struct ContentView: View {
                 Button(action: { check_permission() }) {
                     Text("Scan Barcode")
                 }
-                .sheet(isPresented: $isCameraOpen) {
-                    ImagePickerView(image: $image, recognizedTexts: $recognizedTexts)
+                .sheet(isPresented: $cam_open) {
+                    img_capture(image: $image, recognizedTexts: $recognizedTexts)
                 }
                 
-                if let image = image {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 200, height: 200)
-                }
                 
                 Picker("Text", selection: $selected_index) {
-                    ForEach(0 ..< recognizedTexts.count, id: \.self) { index in
-                        Text(recognizedTexts[index]).tag(index)
+                    Text("Select Option").tag(0)
+                    if recognizedTexts.count > 1 {
+                            ForEach(1 ..< recognizedTexts.count, id: \.self) { index in
+                                Text(recognizedTexts[index]).tag(index)
+                            }
                     }
                 }
                 .pickerStyle(DefaultPickerStyle())
                 .onChange(of: selected_index) {
-                    selectedText = recognizedTexts[selected_index]
-                    let processed_input = process_string(mStr: selectedText)
-                    barcode = generateBarcode(from: processed_input)
+                    selected_text = recognizedTexts[selected_index]
+                    barcode = gen_barcode(from: selected_text)
+                    if (selected_text.count > 10) {
+                        scale_effect = 0.8
+                    }
+                    else {
+                        scale_effect = 0.5
+                    }
                 }
                 
                 Button(action: {
-                    isImageVisible = true
+                    img_visible = true
                 }) {
                     Text("Generate Barcode(s)")
                 }
                 
-                if isImageVisible {
+                if img_visible {
                     if let barcode =  barcode{
                         Image(uiImage: barcode)
                             .resizable()
                             .scaledToFit()
-                            .frame(width: 500, height: 200)
+                            .scaleEffect(scale_effect)
                     }
                 
                 }
@@ -63,11 +67,11 @@ struct ContentView: View {
     func check_permission() {
         switch AVCaptureDevice.authorizationStatus(for: .video) {
             case .authorized:
-                self.isCameraOpen.toggle()
+                self.cam_open.toggle()
             case .notDetermined:
                 AVCaptureDevice.requestAccess(for: .video) { granted in
                     if granted {
-                        self.isCameraOpen.toggle()
+                        self.cam_open.toggle()
                     } else {
                         exit(0)
                     }
@@ -82,7 +86,7 @@ struct ContentView: View {
     }
 }
 
-struct ImagePickerView: UIViewControllerRepresentable {
+struct img_capture: UIViewControllerRepresentable {
     @Binding var image: UIImage?
     @Binding var recognizedTexts: [String]
 
@@ -101,39 +105,63 @@ struct ImagePickerView: UIViewControllerRepresentable {
         Coordinator(self)
     }
 
-    class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
-        var parent: ImagePickerView
+    class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate 
+    {
+        var parent: img_capture
 
-        init(_ parent: ImagePickerView) {
+        init(_ parent: img_capture) 
+        {
             self.parent = parent
         }
 
-        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) 
+        {
             if let pickedImage = info[.originalImage] as? UIImage {
                 self.parent.image = pickedImage
-                self.recognizeText(in: pickedImage)
+                self.recog_text(in: pickedImage)
             }
             picker.dismiss(animated: true)
         }
 
-        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) 
+        {
             picker.dismiss(animated: true)
         }
 
-        func recognizeText(in image: UIImage) {
-            let textRecognitionRequest = VNRecognizeTextRequest { [self] request, error in
+        func recog_text(in image: UIImage) 
+        {
+            let patterns = [
+                "^\\d{9}$",
+                "^\\d{2}[A-Za-z]\\d{3}[A-Za-z]\\d{2}$",
+                "^SHP[A-Za-z]{2}\\d{2}$",
+                "SHP[A-Za-z]{2}$"
+            ]
+            
+            let textRecognitionRequest = VNRecognizeTextRequest 
+            { [self] request, error in
                 guard let observations = request.results as? [VNRecognizedTextObservation] else { return }
 
                 for observation in observations {
                     if let topCandidate = observation.topCandidates(1).first {
                         let recognizedText = topCandidate.string
-                        if (recognizedText.count < 9) {
-                            continue
-                        }
-                        if (!self.parent.recognizedTexts.contains(recognizedText)) {
-                            let text_split_arr = recognizedText.components(separatedBy: "|")
+                        let processed_input = process_string(mStr: recognizedText)
+                        
+                        
+                        if (!self.parent.recognizedTexts.contains(processed_input)) {
+                            let text_split_arr = processed_input.components(separatedBy: CharacterSet(charactersIn: "|:"))
                             for text_result in text_split_arr {
-                                self.parent.recognizedTexts.append(text_result)                     //  002344242 | 0234322344
+                                var match = false
+                                for pattern in patterns {
+                                    print(text_result)
+                                    if text_result.range(of: pattern, options: .regularExpression, range: nil, locale: nil) != nil {
+                                        match = true
+                                        print(match)
+                                        break
+                                    }
+                                }
+                                if match {
+                                    self.parent.recognizedTexts.append(text_result)
+                                }
                             }
                         }
                     }
@@ -155,7 +183,8 @@ struct ImagePickerView: UIViewControllerRepresentable {
     }
 }
 
-func generateBarcode(from string: String) -> UIImage? {
+func gen_barcode(from string: String) -> UIImage? 
+{
 
     let data = string.data(using: String.Encoding.ascii)
 
@@ -193,12 +222,12 @@ func generateBarcode(from string: String) -> UIImage? {
 
         }
     }
-    print("error 2214")
-
+    
     return nil
 }
 
-func process_string(mStr: String) -> String {
+func process_string(mStr: String) -> String 
+{
     let filteredChar = mStr.filter { !$0.isWhitespace && $0 != "-" }
     return String(filteredChar)
 }
