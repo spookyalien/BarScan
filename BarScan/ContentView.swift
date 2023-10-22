@@ -27,21 +27,27 @@ struct ContentView: View {
                 
                 Picker("Text", selection: $selected_index) {
                     Text("Select Option").tag(0)
-                    if recognizedTexts.count > 1 {
-                            ForEach(1 ..< recognizedTexts.count, id: \.self) { index in
-                                Text(recognizedTexts[index]).tag(index)
+                    if recognizedTexts.count >= 1 {
+                            ForEach(1 ..< recognizedTexts.count + 1, id: \.self)
+                            { index in
+                                Text(recognizedTexts[index-1]).tag(index)
                             }
                     }
                 }
                 .pickerStyle(DefaultPickerStyle())
                 .onChange(of: selected_index) {
-                    selected_text = recognizedTexts[selected_index]
-                    barcode = gen_barcode(from: selected_text)
-                    if (selected_text.count > 10) {
-                        scale_effect = 0.8
+                    if selected_index == 0 {
+                        selected_text = "Select Option"
                     }
                     else {
-                        scale_effect = 0.5
+                        selected_text = recognizedTexts[selected_index-1]
+                        barcode = gen_barcode(from: selected_text)
+                        if (selected_text.count > 10) {
+                            scale_effect = 0.9
+                        }
+                        else {
+                            scale_effect = 0.5
+                        }
                     }
                 }
                 
@@ -150,17 +156,11 @@ struct img_capture: UIViewControllerRepresentable {
                         if (!self.parent.recognizedTexts.contains(processed_input)) {
                             let text_split_arr = processed_input.components(separatedBy: CharacterSet(charactersIn: "|:"))
                             for text_result in text_split_arr {
-                                var match = false
                                 for pattern in patterns {
-                                    print(text_result)
                                     if text_result.range(of: pattern, options: .regularExpression, range: nil, locale: nil) != nil {
-                                        match = true
-                                        print(match)
+                                        self.parent.recognizedTexts.append(text_result)
                                         break
                                     }
-                                }
-                                if match {
-                                    self.parent.recognizedTexts.append(text_result)
                                 }
                             }
                         }
