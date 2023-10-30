@@ -1,61 +1,76 @@
-import SwiftUI
+import UIKit
 import AVFoundation
-import Vision
-import CoreImage
-import Foundation
+import SwiftUI
 
-struct ContentView: View {
+
+
+/*
+    Main life of app, contains button that opens camera when pressed, and fills up a selectable list with valid text
+    taken from the photo, which each generate the respective barcode when touched.
+ */
+struct ContentView: View
+{
     @State private var cam_open = false
     @State private var image: UIImage?
     @State private var barcode: UIImage?
     @State private var selected_index = 0
-    @State private var recognizedTexts = [String]()
+    @State private var label_arr = [String]()
     @State private var selected_text: String = ""
     @State private var img_visible = false
     @State private var scale_effect = 0.5
+    @State private var resolution = get_res()
+    @State private var label_size: CGFloat = 20
+    @State private var button_size: CGFloat = 25
+    
 
     var body: some View {
         NavigationView {
             VStack {
-                Button(action: { check_permission() }) {
-                    Text("Scan Barcode")
+                Spacer().frame(height:20)
+                HStack {
+                    Image("Image") // Replace with your app logo image name
+                                .resizable()
+                                .frame(width: 60, height: 60) // Adjust the size as needed
+                    Text("BarScan")
+                                .font(.title)
+                                .foregroundStyle(Color.black)
+
+                    
+                    Spacer()
+                    Button(action: {
+                        label_arr.removeAll()
+                    }) {
+                        Text("Clear")
+                            .font(.headline)
+                            .padding(10)
+                            .background(Color.red)
+                            .foregroundColor(.black)
+                            .cornerRadius(8)
+                    }
                 }
-                .sheet(isPresented: $cam_open) {
-                    img_capture(image: $image, recognizedTexts: $recognizedTexts)
-                }
-                
-                
-                Picker("Text", selection: $selected_index) {
-                    Text("Select Option").tag(0)
-                    if recognizedTexts.count >= 1 {
-                            ForEach(1 ..< recognizedTexts.count + 1, id: \.self)
-                            { index in
-                                Text(recognizedTexts[index-1]).tag(index)
+                .padding(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
+                .background(Color.gray) 
+                .foregroundColor(.white)
+            
+                List {
+                    ForEach(label_arr.indices, id: \.self) { index in
+                        Button(action: {
+                            selected_text = label_arr[index]
+                            barcode = gen_barcode(from: selected_text)
+                            if selected_text.count > 10 {
+                                scale_effect = 0.9
+                            } else {
+                                scale_effect = 0.5
                             }
-                    }
-                }
-                .pickerStyle(DefaultPickerStyle())
-                .onChange(of: selected_index) {
-                    if selected_index == 0 {
-                        selected_text = "Select Option"
-                    }
-                    else {
-                        selected_text = recognizedTexts[selected_index-1]
-                        barcode = gen_barcode(from: selected_text)
-                        if (selected_text.count > 10) {
-                            scale_effect = 0.9
-                        }
-                        else {
-                            scale_effect = 0.5
+                            img_visible = true
+                        }) {
+                            Text(label_arr[index])
+                                .font(.system(size: label_size))
                         }
                     }
                 }
-                
-                Button(action: {
-                    img_visible = true
-                }) {
-                    Text("Generate Barcode(s)")
-                }
+                .frame(maxHeight: .infinity)
+                .padding(.top, (resolution.height)/30)
                 
                 if img_visible {
                     if let barcode =  barcode{
@@ -66,11 +81,28 @@ struct ContentView: View {
                     }
                 
                 }
+                
+                Button(action: { check_permission() }) {
+                    Text("Scan Barcode")
+                        .font(.system(size: button_size))
+                        .padding(.bottom, resolution.height/120)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 90)
+                        .background(Color.red)
+                        .foregroundColor(.black)
+                        .cornerRadius(10)
+                }
+                .sheet(isPresented: $cam_open) {
+                    img_capture(image: $image, label_arr: $label_arr)
+                }
             }
         }
+        .navigationBarTitle("")
+        .navigationBarHidden(true)
     }
 
-    func check_permission() {
+    func check_permission()
+    {
         switch AVCaptureDevice.authorizationStatus(for: .video) {
             case .authorized:
                 self.cam_open.toggle()
@@ -90,144 +122,5 @@ struct ContentView: View {
                 break
         }
     }
-}
-
-struct img_capture: UIViewControllerRepresentable {
-    @Binding var image: UIImage?
-    @Binding var recognizedTexts: [String]
-
-    func makeUIViewController(context: Context) -> UIImagePickerController {
-        let controller = UIImagePickerController()
-        controller.sourceType = .camera
-        controller.delegate = context.coordinator
-        return controller
-    }
-
-    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {
-        // Update the view controller if needed
-    }
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
-    }
-
-    class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate 
-    {
-        var parent: img_capture
-
-        init(_ parent: img_capture) 
-        {
-            self.parent = parent
-        }
-
-        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) 
-        {
-            if let pickedImage = info[.originalImage] as? UIImage {
-                self.parent.image = pickedImage
-                self.recog_text(in: pickedImage)
-            }
-            picker.dismiss(animated: true)
-        }
-
-        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) 
-        {
-            picker.dismiss(animated: true)
-        }
-
-        func recog_text(in image: UIImage) 
-        {
-            let patterns = [
-                "^\\d{9}$",
-                "^\\d{2}[A-Za-z]\\d{3}[A-Za-z]\\d{2}$",
-                "^SHP[A-Za-z]{2}\\d{2}$",
-                "SHP[A-Za-z]{2}$"
-            ]
-            
-            let textRecognitionRequest = VNRecognizeTextRequest 
-            { [self] request, error in
-                guard let observations = request.results as? [VNRecognizedTextObservation] else { return }
-
-                for observation in observations {
-                    if let topCandidate = observation.topCandidates(1).first {
-                        let recognizedText = topCandidate.string
-                        let processed_input = process_string(mStr: recognizedText)
-                        
-                        
-                        if (!self.parent.recognizedTexts.contains(processed_input)) {
-                            let text_split_arr = processed_input.components(separatedBy: CharacterSet(charactersIn: "|:"))
-                            for text_result in text_split_arr {
-                                for pattern in patterns {
-                                    if text_result.range(of: pattern, options: .regularExpression, range: nil, locale: nil) != nil {
-                                        self.parent.recognizedTexts.append(text_result)
-                                        break
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            textRecognitionRequest.recognitionLevel = .accurate
-
-            if let cgImage = image.cgImage {
-                let imageRequestHandler = VNImageRequestHandler(cgImage: cgImage, options: [:])
-
-                do {
-                    try imageRequestHandler.perform([textRecognitionRequest])
-                } catch {
-                    print(error)
-                }
-            }
-        }
-    }
-}
-
-func gen_barcode(from string: String) -> UIImage? 
-{
-
-    let data = string.data(using: String.Encoding.ascii)
-
-    if let filter = CIFilter(name: "CICode128BarcodeGenerator") {
-        filter.setDefaults()
-        //Margin
-        filter.setValue(7.00, forKey: "inputQuietSpace")
-        filter.setValue(data, forKey: "inputMessage")
-        //Scaling
-        let transform = CGAffineTransform(scaleX: 3, y: 3)
-
-        if let output = filter.outputImage?.transformed(by: transform) {
-            let context:CIContext = CIContext.init(options: nil)
-            let cgImage:CGImage = context.createCGImage(output, from: output.extent)!
-            let rawImage:UIImage = UIImage.init(cgImage: cgImage)
-
-            //Refinement code to allow conversion to NSData or share UIImage. Code here:
-            //http://stackoverflow.com/questions/2240395/uiimage-created-from-cgimageref-fails-with-uiimagepngrepresentation
-            let cgimage: CGImage = (rawImage.cgImage)!
-            let cropZone = CGRect(x: 0, y: 0, width: Int(rawImage.size.width), height: Int(rawImage.size.height))
-            let cWidth: size_t  = size_t(cropZone.size.width)
-            let cHeight: size_t  = size_t(cropZone.size.height)
-            let bitsPerComponent: size_t = cgimage.bitsPerComponent
-            //THE OPERATIONS ORDER COULD BE FLIPPED, ALTHOUGH, IT DOESN'T AFFECT THE RESULT
-            let bytesPerRow = (cgimage.bytesPerRow) / (cgimage.width  * cWidth)
-
-            let context2: CGContext = CGContext(data: nil, width: cWidth, height: cHeight, bitsPerComponent: bitsPerComponent, bytesPerRow: bytesPerRow, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: cgimage.bitmapInfo.rawValue)!
-
-            context2.draw(cgimage, in: cropZone)
-
-            let result: CGImage  = context2.makeImage()!
-            let finalImage = UIImage(cgImage: result)
-
-            return finalImage
-
-        }
-    }
     
-    return nil
-}
-
-func process_string(mStr: String) -> String 
-{
-    let filteredChar = mStr.filter { !$0.isWhitespace && $0 != "-" }
-    return String(filteredChar)
 }
