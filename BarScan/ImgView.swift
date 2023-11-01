@@ -20,7 +20,7 @@ struct img_capture: UIViewControllerRepresentable
     let delimiters = "|:/"
     
 
-    func makeUIViewController(context: Context) -> UIImagePickerController 
+    func makeUIViewController(context: Context) -> UIImagePickerController
     {
         let controller = UIImagePickerController()
         controller.sourceType = .camera
@@ -28,7 +28,7 @@ struct img_capture: UIViewControllerRepresentable
         return controller
     }
 
-    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) 
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context)
     {
         // Update the view controller if needed
     }
@@ -66,23 +66,34 @@ struct img_capture: UIViewControllerRepresentable
             { [self] request, error in
                 guard let observations = request.results as? [VNRecognizedTextObservation] else { return }
 
-                for observation in observations {
-                    if let topCandidate = observation.topCandidates(1).first {
+                for index in 0..<observations.count {
+                    if let topCandidate = observations[index].topCandidates(1).first {
                         let recognizedText = topCandidate.string
-                        let processed_input = process_string(mStr: recognizedText)
-                        
-                        
-                        if (!self.parent.label_arr.contains(processed_input)) {
-                            let text_split_arr = processed_input.components(separatedBy: CharacterSet(charactersIn: delimiters))
-                            for text_result in text_split_arr {
-                                for pattern in patterns {
-                                    if text_result.range(of: pattern, options: .regularExpression, range: nil, locale: nil) != nil {
-                                        self.parent.label_arr.append(text_result)
-                                        break
-                                    }
+                        var processed_input = process_string(mStr: recognizedText)
+                        if processed_input.range(of: "^\\d{2}[A-ZZa-z]$", options: .regularExpression, range: nil, locale: nil) != nil {
+                            if let unwrap_input = observations[index+1].topCandidates(1).first?.string {
+                                if ((index + 1) < observations.count) {
+                                    processed_input += unwrap_input
+                                }
+                                else if ((index + 1) == observations.count) {
+                                    processed_input += unwrap_input
+                                    break
                                 }
                             }
                         }
+                        
+                        let text_split_arr = processed_input.components(separatedBy: CharacterSet(charactersIn: delimiters))
+                        for text_result in text_split_arr {
+                            if (self.parent.label_arr.contains(text_result)) { break }
+                            print(text_result)
+                            for pattern in patterns {
+                                if text_result.range(of: pattern, options: .regularExpression, range: nil, locale: nil) != nil {
+                                    self.parent.label_arr.append(text_result)
+                                    break
+                                }
+                            }
+                        }
+                    
                     }
                 }
             }

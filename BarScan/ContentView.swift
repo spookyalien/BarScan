@@ -10,12 +10,12 @@ import SwiftUI
  */
 struct ContentView: View
 {
-    @State private var cam_open = false
     @State private var image: UIImage?
     @State private var barcode: UIImage?
     @State private var selected_index = 0
-    @State private var label_arr = [String]()
     @State private var selected_text: String = ""
+    @State private var label_arr = [String]()
+    @State private var cam_open = false
     @State private var img_visible = false
     @State private var scale_effect = 0.5
     @State private var resolution = get_res()
@@ -49,7 +49,7 @@ struct ContentView: View
                     }
                 }
                 .padding(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
-                .background(Color.gray) 
+                .background(Color.gray)
                 .foregroundColor(.white)
             
                 List {
