@@ -64,7 +64,7 @@ struct ContentView: View
                             }
                             img_visible = true
                         }) {
-                            Text(label_arr[index])
+                            Text(label_arr[index].uppercased())
                                 .font(.system(size: label_size))
                         }
                     }

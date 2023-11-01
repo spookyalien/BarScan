@@ -14,8 +14,7 @@ struct img_capture: UIViewControllerRepresentable
     let patterns = [
         "^\\d{9}$",
         "^\\d{2}[A-Za-z]\\d{3}[A-Za-z]\\d{2}$",
-        "^(?i)SHP[A-Za-z]{2}\\d{2}$",
-        "^(?i)SHP[A-Za-z]{2}$"
+        "^(?i)SHP[A-Za-z]{2}\\d{2}$"
     ]
     let delimiters = "|:/"
     
@@ -72,18 +71,18 @@ struct img_capture: UIViewControllerRepresentable
                         var processed_input = process_string(mStr: recognizedText)
                         // Account for B mistaken as 8 but ignore for SHPBA12
                         if (processed_input.count == 3 || processed_input.count == 6) {
-                            let index3 = processed_input.index(processed_input.startIndex, offsetBy: 2)
-                            let index4 = processed_input.index(processed_input.startIndex, offsetBy: 3)
+                            let loc1 = processed_input.index(processed_input.startIndex, offsetBy: 2)
+                            let loc2 = processed_input.index(processed_input.startIndex, offsetBy: 3)
                                 
-                            if processed_input[index3] == "8" {
-                                processed_input.replaceSubrange(index3...index3, with: "B")
+                            if processed_input[loc1] == "8" {
+                                processed_input.replaceSubrange(loc1...loc1, with: "B")
                             }
                                 
-                            if (processed_input[index4] == "8" && processed_input.count == 6) {
-                                processed_input.replaceSubrange(index4...index4, with: "B")
+                            if (processed_input.count == 6 && processed_input[loc2] == "8") {
+                                processed_input.replaceSubrange(loc2...loc2, with: "B")
                             }
                          }
-                     }
+                     
         
                         if processed_input.range(of: "^\\d{2}[A-Za-z]$", options: .regularExpression, range: nil, locale: nil) != nil {
                             if let unwrap_input = observations[index+1].topCandidates(1).first?.string {
@@ -108,6 +107,9 @@ struct img_capture: UIViewControllerRepresentable
                             }
 
                         }
+                        else if processed_input.range(of: "^(?i)SHP[A-Za-z]{2}$", options: .regularExpression, range: nil, locale: nil) != nil {
+                            processed_input += "01"
+                        }
                         
                         let text_split_arr = processed_input.components(separatedBy: CharacterSet(charactersIn: delimiters))
                         for text_result in text_split_arr {
@@ -119,7 +121,6 @@ struct img_capture: UIViewControllerRepresentable
                                 }
                             }
                         }
-                    
                     }
                 }
             }
