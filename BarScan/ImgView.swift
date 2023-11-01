@@ -71,20 +71,20 @@ struct img_capture: UIViewControllerRepresentable
                         let recognizedText = topCandidate.string
                         var processed_input = process_string(mStr: recognizedText)
                         // Account for B mistaken as 8 but ignore for SHPBA12
-                        if processed_input.count != 7 {
-                            if processed_input.count >= 4 {
-                                let index3 = processed_input.index(processed_input.startIndex, offsetBy: 2)
-                                let index4 = processed_input.index(processed_input.startIndex, offsetBy: 3)
+                        if (processed_input.count == 3 || processed_input.count == 6 {
+                            let index3 = processed_input.index(processed_input.startIndex, offsetBy: 2)
+                            let index4 = processed_input.index(processed_input.startIndex, offsetBy: 3)
                                 
-                                if processed_input[index3] == "8" {
-                                    processed_input.replaceSubrange(index3...index3, with: "B")
-                                }
-                                
-                                if processed_input[index4] == "8" {
-                                    processed_input.replaceSubrange(index4...index4, with: "B")
-                                }
+                            if processed_input[index3] == "8" {
+                                processed_input.replaceSubrange(index3...index3, with: "B")
                             }
+                                
+                            if (processed_input[index4] == "8" && processed_input.count == 6) {
+                                processed_input.replaceSubrange(index4...index4, with: "B")
+                            }
+                          }
                         }
+        
                         if processed_input.range(of: "^\\d{2}[A-Za-z]$", options: .regularExpression, range: nil, locale: nil) != nil {
                             if let unwrap_input = observations[index+1].topCandidates(1).first?.string {
                                 if ((index + 1) < observations.count) {
