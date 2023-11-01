@@ -12,13 +12,13 @@ struct ContentView: View
 {
     @State private var image: UIImage?
     @State private var barcode: UIImage?
-    @State private var selected_index = 0
     @State private var selected_text: String = ""
     @State private var label_arr = [String]()
+    @State private var resolution = get_res()
     @State private var cam_open = false
     @State private var img_visible = false
     @State private var scale_effect = 0.5
-    @State private var resolution = get_res()
+    @State private var selected_index = 0
     @State private var label_size: CGFloat = 20
     @State private var button_size: CGFloat = 25
     
@@ -28,9 +28,9 @@ struct ContentView: View
             VStack {
                 Spacer().frame(height:20)
                 HStack {
-                    Image("Image") // Replace with your app logo image name
+                    Image("Image") 
                                 .resizable()
-                                .frame(width: 60, height: 60) // Adjust the size as needed
+                                .frame(width: 60, height: 60)
                     Text("BarScan")
                                 .font(.title)
                                 .foregroundStyle(Color.black)

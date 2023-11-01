@@ -70,7 +70,22 @@ struct img_capture: UIViewControllerRepresentable
                     if let topCandidate = observations[index].topCandidates(1).first {
                         let recognizedText = topCandidate.string
                         var processed_input = process_string(mStr: recognizedText)
-                        if processed_input.range(of: "^\\d{2}[A-ZZa-z]$", options: .regularExpression, range: nil, locale: nil) != nil {
+                        // Account for B mistaken as 8 but ignore for SHPBA12
+                        if processed_input.count != 7 {
+                            if processed_input.count >= 4 {
+                                let index3 = processed_input.index(processed_input.startIndex, offsetBy: 2)
+                                let index4 = processed_input.index(processed_input.startIndex, offsetBy: 3)
+                                
+                                if processed_input[index3] == "8" {
+                                    processed_input.replaceSubrange(index3...index3, with: "B")
+                                }
+                                
+                                if processed_input[index4] == "8" {
+                                    processed_input.replaceSubrange(index4...index4, with: "B")
+                                }
+                            }
+                        }
+                        if processed_input.range(of: "^\\d{2}[A-Za-z]$", options: .regularExpression, range: nil, locale: nil) != nil {
                             if let unwrap_input = observations[index+1].topCandidates(1).first?.string {
                                 if ((index + 1) < observations.count) {
                                     processed_input += unwrap_input
@@ -81,11 +96,22 @@ struct img_capture: UIViewControllerRepresentable
                                 }
                             }
                         }
+                        else if processed_input.range(of: "^\\d{3}[A-Za-z]\\d{2}$", options: .regularExpression, range: nil, locale: nil) != nil {
+                            if let unwrap_input = observations[index+1].topCandidates(1).first?.string {
+                                if ((index + 1) < observations.count) {
+                                    processed_input = unwrap_input + processed_input
+                                }
+                                else if ((index + 1) == observations.count) {
+                                    processed_input = unwrap_input + processed_input
+                                    break
+                                }
+                            }
+
+                        }
                         
                         let text_split_arr = processed_input.components(separatedBy: CharacterSet(charactersIn: delimiters))
                         for text_result in text_split_arr {
                             if (self.parent.label_arr.contains(text_result)) { break }
-                            print(text_result)
                             for pattern in patterns {
                                 if text_result.range(of: pattern, options: .regularExpression, range: nil, locale: nil) != nil {
                                     self.parent.label_arr.append(text_result)
