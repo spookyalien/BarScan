@@ -64,3 +64,70 @@ func process_string(mStr: String) -> String
     let filteredChar = mStr.filter { !$0.isWhitespace && $0 != "-" }
     return String(filteredChar)
 }
+
+
+func input_alert(completion: @escaping (String?) -> Void) {
+    let alert = UIAlertController(title: "Generate barcode", message: "", preferredStyle: .alert)
+    
+    alert.addTextField { textField in
+        textField.placeholder = "Enter barcode"
+    }
+    
+    let addAction = UIAlertAction(title: "Generate", style: .default) { _ in
+        if let textField = alert.textFields?.first, let enteredText = textField.text {
+            // Call the completion closure with the entered text
+            completion(enteredText)
+        } else {
+            // Call the completion closure with nil if no text is entered
+            completion(nil)
+        }
+    }
+    
+    let cancelAction = UIAlertAction(title: "Cancel", style: .cancel) { _ in
+        // Call the completion closure with nil if the user cancels
+        completion(nil)
+    }
+    
+    alert.addAction(addAction)
+    alert.addAction(cancelAction)
+    
+    showAlert(alert: alert)
+}
+
+
+func showAlert(alert: UIAlertController) {
+    if let controller = topMostViewController() {
+        controller.present(alert, animated: true)
+    }
+}
+
+private func keyWindow() -> UIWindow? {
+    return UIApplication.shared.connectedScenes
+    .filter {$0.activationState == .foregroundActive}
+    .compactMap {$0 as? UIWindowScene}
+    .first?.windows.filter {$0.isKeyWindow}.first
+}
+
+private func topMostViewController() -> UIViewController? {
+    guard let rootController = keyWindow()?.rootViewController else {
+        return nil
+    }
+    return topMostViewController(for: rootController)
+}
+
+private func topMostViewController(for controller: UIViewController) -> UIViewController {
+    if let presentedController = controller.presentedViewController {
+        return topMostViewController(for: presentedController)
+    } else if let navigationController = controller as? UINavigationController {
+        guard let topController = navigationController.topViewController else {
+            return navigationController
+        }
+        return topMostViewController(for: topController)
+    } else if let tabController = controller as? UITabBarController {
+        guard let topController = tabController.selectedViewController else {
+            return tabController
+        }
+        return topMostViewController(for: topController)
+    }
+    return controller
+}

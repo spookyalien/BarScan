@@ -28,17 +28,44 @@ struct ContentView: View
             VStack {
                 Spacer().frame(height:20)
                 HStack {
-                    Image("Image") 
+                    // App Logo
+                    Image("Image")
                                 .resizable()
                                 .frame(width: 60, height: 60)
+                    // App Title
                     Text("BarScan")
                                 .font(.title)
                                 .foregroundStyle(Color.black)
 
                     
                     Spacer()
+                    
+                    // Generate custom barcode
+                    Button(action: {
+                        input_alert { entered_text in
+                                if let entered_text = entered_text {
+                                    if (!label_arr.contains(entered_text)) {
+                                        selected_text = entered_text
+                                        barcode = gen_barcode(from: selected_text)
+                                        label_arr.append(selected_text)
+                                        img_visible = true
+                                    }
+                                }
+                            }
+                    }
+                    ) {
+                        Text("Generate")
+                            .font(.headline)
+                            .padding(10)
+                            .background(Color.red)
+                            .foregroundColor(.black)
+                            .cornerRadius(8)
+                    }
+                                
+                    // Remove all entries from barcode list
                     Button(action: {
                         label_arr.removeAll()
+                        img_visible = false
                     }) {
                         Text("Clear")
                             .font(.headline)
@@ -52,13 +79,14 @@ struct ContentView: View
                 .background(Color.gray)
                 .foregroundColor(.white)
             
+                // List of texts for barcode generation
                 List {
                     ForEach(label_arr.indices, id: \.self) { index in
                         Button(action: {
                             selected_text = label_arr[index]
                             barcode = gen_barcode(from: selected_text)
                             if selected_text.count > 10 {
-                                scale_effect = 0.9
+                                scale_effect = 0.8
                             } else {
                                 scale_effect = 0.5
                             }
@@ -72,8 +100,9 @@ struct ContentView: View
                 .frame(maxHeight: .infinity)
                 .padding(.top, (resolution.height)/30)
                 
+                // Sets barcode and displays below list
                 if img_visible {
-                    if let barcode =  barcode{
+                    if let barcode = barcode{
                         Image(uiImage: barcode)
                             .resizable()
                             .scaledToFit()
@@ -82,7 +111,9 @@ struct ContentView: View
                 
                 }
                 
-                Button(action: { check_permission() }) {
+                // Checks if camera can be accessed and then opens camera
+                Button(action: { check_permission() })
+                {
                     Text("Scan Barcode")
                         .font(.system(size: button_size))
                         .padding(.bottom, resolution.height/120)
@@ -99,6 +130,7 @@ struct ContentView: View
         }
         .navigationBarTitle("")
         .navigationBarHidden(true)
+        
     }
 
     func check_permission()
@@ -122,5 +154,5 @@ struct ContentView: View
                 break
         }
     }
-    
+
 }

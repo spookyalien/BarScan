@@ -12,9 +12,14 @@ struct img_capture: UIViewControllerRepresentable
     @Binding var image: UIImage?
     @Binding var label_arr: [String]
     let patterns = [
+        // DPCI
         "^\\d{9}$",
+        // Backroom location
         "^\\d{2}[A-Za-z]\\d{3}[A-Za-z]\\d{2}$",
-        "^(?i)SHP[A-Za-z]{2}\\d{2}$"
+        // Fulfillment cart
+        "^(?i)SHP[A-Za-z]{2}\\d{2}$",
+        // Sales Planner
+        "^J\\d{4}[a-zA-Z]{1,2}$"
     ]
     let delimiters = "|:/"
     
@@ -59,6 +64,10 @@ struct img_capture: UIViewControllerRepresentable
             picker.dismiss(animated: true)
         }
 
+        
+        /*
+        -Reads text from image and corrects it to ensure best processing of barcode
+         */
         func recog_text(in image: UIImage, patterns: [String], delimiters: String)
         {
             let textRecognitionRequest = VNRecognizeTextRequest
@@ -68,8 +77,11 @@ struct img_capture: UIViewControllerRepresentable
                 for index in 0..<observations.count {
                     if let topCandidate = observations[index].topCandidates(1).first {
                         let recognizedText = topCandidate.string
+                        //Processed_input = delimited string UIImage
                         var processed_input = process_string(mStr: recognizedText)
                         // Account for B mistaken as 8 but ignore for SHPBA12
+                        // count == 3 for first part of backroom location (e.g. "01B", "99B), and count == 6 for last part of backroom location (e.g. "020B01", "114F01")
+                        // Backroom location is split in myDay
                         if (processed_input.count == 3 || processed_input.count == 6) {
                             let loc1 = processed_input.index(processed_input.startIndex, offsetBy: 2)
                             let loc2 = processed_input.index(processed_input.startIndex, offsetBy: 3)
@@ -84,6 +96,11 @@ struct img_capture: UIViewControllerRepresentable
                          }
                      
         
+                        /*
+                         Image reading special cases
+                         */
+                        
+                        // First part of backroom location, appends to text to create location
                         if processed_input.range(of: "^\\d{2}[A-Za-z]$", options: .regularExpression, range: nil, locale: nil) != nil {
                             if let unwrap_input = observations[index+1].topCandidates(1).first?.string {
                                 if ((index + 1) < observations.count) {
@@ -95,6 +112,7 @@ struct img_capture: UIViewControllerRepresentable
                                 }
                             }
                         }
+                        // Last part of backroom location, appends text to create location
                         else if processed_input.range(of: "^\\d{3}[A-Za-z]\\d{2}$", options: .regularExpression, range: nil, locale: nil) != nil {
                             if let unwrap_input = observations[index+1].topCandidates(1).first?.string {
                                 if ((index + 1) < observations.count) {
@@ -107,8 +125,32 @@ struct img_capture: UIViewControllerRepresentable
                             }
 
                         }
+                        // Checks for blank fulfillment cart (cart with no numbers at end) and appends basic entry "01" to cart name
                         else if processed_input.range(of: "^(?i)SHP[A-Za-z]{2}$", options: .regularExpression, range: nil, locale: nil) != nil {
                             processed_input += "01"
+                        }
+                        // Fixes issue of clock (e.g. 00:01:46) being interpreted in image scanning of fulfillment cart and replaces end 0 with 1 for compatibiity with ePick
+                        else if processed_input.range(of: "^(?i)SHP[A-Za-z]00$", options: .regularExpression, range: nil, locale: nil) != nil {
+                            processed_input.removeLast()
+                            processed_input += "1"
+                        }
+                        // Accounts for issue of backroom letter O being mistaken as 0
+                        else if processed_input.range(of: "^\\d{2}[A-Za-z]\\d{6}$", options: .regularExpression, range: nil, locale: nil) != nil {
+                            // Set to where O is in backroom location barcode == 5
+                            let back_loc = processed_input.index(processed_input.startIndex, offsetBy: 5)
+                            
+                            if (processed_input[back_loc] == "0") {
+                                processed_input.replaceSubrange(back_loc...back_loc, with: "O")
+                            }
+                        }
+                        // Accounts for issue of Backroom letter B being an 8 (processed_input is not split)
+                        else if processed_input.range(of: "^\\d{6}[A-Za-z]\\d{2}$", options: .regularExpression, range: nil, locale: nil) != nil {
+                            // Set to where B is in backroom location barcode == 2
+                            let back_loc = processed_input.index(processed_input.startIndex, offsetBy: 2)
+                            
+                            if (processed_input[back_loc] == "8") {
+                                processed_input.replaceSubrange(back_loc...back_loc, with: "B")
+                            }
                         }
                         
                         let text_split_arr = processed_input.components(separatedBy: CharacterSet(charactersIn: delimiters))
