@@ -65,6 +65,33 @@ func process_string(mStr: String) -> String
     return String(filteredChar)
 }
 
+func convert_cyrillic(text: String) -> String {
+    let cyrillic_map: [Character: String] = [
+        "А": "A", "Б": "B", "В": "V", "Г": "G", "Д": "D", "Е": "E", "Ё": "YO", "Ж": "ZH",
+        "З": "Z", "И": "I", "Й": "Y", "К": "K", "Л": "L", "М": "M", "Н": "N", "О": "O",
+        "П": "P", "Р": "R", "С": "S", "Т": "T",
+        "Э": "E",
+        "а": "a", "б": "b", "в": "v", "г": "g", "е": "e", "ё": "yo", "ж": "zh",
+        "з": "z", "и": "i", "й": "y", "к": "k", "л": "l", "м": "m", "н": "n", "о": "o",
+        "т": "t", "э": "e",
+    ]
+
+    var latinText = ""
+
+    for char in text {
+        if let latinEquivalent = cyrillic_map[char] {
+            latinText.append(latinEquivalent)
+        } else {
+            latinText.append(char)
+        }
+    }
+
+    return latinText
+}
+
+/*
+    CUSTOM ALERT: Used for adding user inputted text for barcode generation
+ */
 
 func input_alert(completion: @escaping (String?) -> Void) {
     let alert = UIAlertController(title: "Generate barcode", message: "", preferredStyle: .alert)

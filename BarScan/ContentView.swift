@@ -45,7 +45,7 @@ struct ContentView: View
                         input_alert { entered_text in
                                 if let entered_text = entered_text {
                                     if (!label_arr.contains(entered_text)) {
-                                        selected_text = entered_text
+                                        selected_text = entered_text.uppercased()
                                         barcode = gen_barcode(from: selected_text)
                                         label_arr.append(selected_text)
                                         img_visible = true
@@ -54,7 +54,7 @@ struct ContentView: View
                             }
                     }
                     ) {
-                        Text("Generate")
+                        Text("Add")
                             .font(.headline)
                             .padding(10)
                             .background(Color.red)
@@ -85,6 +85,7 @@ struct ContentView: View
                         Button(action: {
                             selected_text = label_arr[index]
                             barcode = gen_barcode(from: selected_text)
+                            // Big barcodes require more of screen to work, opposite for smaller barcodes
                             if selected_text.count > 10 {
                                 scale_effect = 0.8
                             } else {

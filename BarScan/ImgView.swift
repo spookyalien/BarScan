@@ -18,10 +18,8 @@ struct img_capture: UIViewControllerRepresentable
         "^\\d{2}[A-Za-z]\\d{3}[A-Za-z]\\d{2}$",
         // Fulfillment cart
         "^(?i)SHP[A-Za-z]{2}\\d{2}$",
-        // Sales Planner
-        "^J\\d{4}[a-zA-Z]{1,2}$"
     ]
-    let delimiters = "|:/"
+    let delimiters = "|:/#"
     
 
     func makeUIViewController(context: Context) -> UIImagePickerController
@@ -79,6 +77,8 @@ struct img_capture: UIViewControllerRepresentable
                         let recognizedText = topCandidate.string
                         //Processed_input = delimited string UIImage
                         var processed_input = process_string(mStr: recognizedText)
+                        // Remove misread latin chars
+                        processed_input = convert_cyrillic(text: processed_input)
                         // Account for B mistaken as 8 but ignore for SHPBA12
                         // count == 3 for first part of backroom location (e.g. "01B", "99B), and count == 6 for last part of backroom location (e.g. "020B01", "114F01")
                         // Backroom location is split in myDay
@@ -130,7 +130,7 @@ struct img_capture: UIViewControllerRepresentable
                             processed_input += "01"
                         }
                         // Fixes issue of clock (e.g. 00:01:46) being interpreted in image scanning of fulfillment cart and replaces end 0 with 1 for compatibiity with ePick
-                        else if processed_input.range(of: "^(?i)SHP[A-Za-z]00$", options: .regularExpression, range: nil, locale: nil) != nil {
+                        else if processed_input.range(of: "^(?i)SHP[A-Za-z]0\\d{1}$", options: .regularExpression, range: nil, locale: nil) != nil {
                             processed_input.removeLast()
                             processed_input += "1"
                         }
@@ -150,6 +150,18 @@ struct img_capture: UIViewControllerRepresentable
                             
                             if (processed_input[back_loc] == "8") {
                                 processed_input.replaceSubrange(back_loc...back_loc, with: "B")
+                            }
+                        }
+                        // Accounts for misread Os and 0s e.g. 01B02O009
+                        else if processed_input.range(of: "\\d{2}[A-Za-z]\\d{2}[A-Za-z]{1}\\d{3}", options: .regularExpression, range: nil, locale: nil) != nil {
+                            let loc_o = processed_input.index(processed_input.startIndex, offsetBy: 5)
+                            let loc_zero = processed_input.index(processed_input.startIndex, offsetBy: 6)
+                            
+                            if (processed_input[loc_o] == "O") {
+                                processed_input.replaceSubrange(loc_o...loc_o, with: "0")
+                            }
+                            if (processed_input[loc_zero] == "0") {
+                                processed_input.replaceSubrange(loc_zero...loc_zero , with: "O")
                             }
                         }
                         
