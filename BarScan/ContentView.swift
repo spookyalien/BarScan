@@ -21,6 +21,7 @@ struct ContentView: View
     @State private var selected_index = 0
     @State private var label_size: CGFloat = 20
     @State private var button_size: CGFloat = 25
+    @State private var roundness: CGFloat = 6
     
 
     var body: some View {
@@ -54,12 +55,14 @@ struct ContentView: View
                             }
                     }
                     ) {
-                        Text("Add")
+                        Text("+")
                             .font(.headline)
+                            .frame(width: 50)
+                            .frame(height: 20)
                             .padding(10)
                             .background(Color.red)
                             .foregroundColor(.black)
-                            .cornerRadius(8)
+                            .cornerRadius(roundness)
                     }
                                 
                     // Remove all entries from barcode list
@@ -67,12 +70,14 @@ struct ContentView: View
                         label_arr.removeAll()
                         img_visible = false
                     }) {
-                        Text("Clear")
+                        Image(systemName: "trash")
                             .font(.headline)
+                            .frame(width: 50)
+                            .frame(height: 20)
                             .padding(10)
                             .background(Color.red)
                             .foregroundColor(.black)
-                            .cornerRadius(8)
+                            .cornerRadius(roundness)
                     }
                 }
                 .padding(EdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16))
@@ -122,7 +127,7 @@ struct ContentView: View
                         .frame(height: 90)
                         .background(Color.red)
                         .foregroundColor(.black)
-                        .cornerRadius(10)
+                        .cornerRadius(roundness)
                 }
                 .sheet(isPresented: $cam_open) {
                     img_capture(image: $image, label_arr: $label_arr)

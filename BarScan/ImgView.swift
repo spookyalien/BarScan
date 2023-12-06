@@ -18,6 +18,8 @@ struct img_capture: UIViewControllerRepresentable
         "^\\d{2}[A-Za-z]\\d{3}[A-Za-z]\\d{2}$",
         // Fulfillment cart
         "^(?i)SHP[A-Za-z]{2}\\d{2}$",
+        // UPC
+        "^\\d{12}$"
     ]
     let delimiters = "|:/#"
     

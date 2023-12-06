@@ -61,8 +61,16 @@ func gen_barcode(from string: String) -> UIImage?
 
 func process_string(mStr: String) -> String
 {
-    let filteredChar = mStr.filter { !$0.isWhitespace && $0 != "-" }
-    return String(filteredChar)
+    var filtered_chars = ""
+    let num_slashes = mStr.filter { $0 == "/" }.count
+    
+    if (num_slashes > 1) {
+       filtered_chars = mStr.filter { !$0.isWhitespace && $0 != "-" && $0 != "/"}
+    }
+    else {
+        filtered_chars = mStr.filter { !$0.isWhitespace && $0 != "-"}
+    }
+    return String(filtered_chars)
 }
 
 func convert_cyrillic(text: String) -> String {
@@ -94,7 +102,7 @@ func convert_cyrillic(text: String) -> String {
  */
 
 func input_alert(completion: @escaping (String?) -> Void) {
-    let alert = UIAlertController(title: "Generate barcode", message: "", preferredStyle: .alert)
+    let alert = UIAlertController(title: "Generate Barcode", message: "", preferredStyle: .alert)
     
     alert.addTextField { textField in
         textField.placeholder = "Enter barcode"
@@ -102,18 +110,26 @@ func input_alert(completion: @escaping (String?) -> Void) {
     
     let addAction = UIAlertAction(title: "Generate", style: .default) { _ in
         if let textField = alert.textFields?.first, let enteredText = textField.text {
-            // Call the completion closure with the entered text
+            let placeholderAttributes: [NSAttributedString.Key: Any] = [
+            .foregroundColor: UIColor.red,
+            .font: UIFont.systemFont(ofSize: 17.0) // Adjust the font size as needed
+        ]
+        textField.attributedPlaceholder = NSAttributedString(string: "Enter barcode", attributes: placeholderAttributes)
+    
             completion(enteredText)
         } else {
-            // Call the completion closure with nil if no text is entered
             completion(nil)
         }
     }
+    addAction.setValue(UIColor.red, forKey: "titleTextColor")
+
     
     let cancelAction = UIAlertAction(title: "Cancel", style: .cancel) { _ in
         // Call the completion closure with nil if the user cancels
         completion(nil)
     }
+    cancelAction.setValue(UIColor.white, forKey: "titleTextColor")
+
     
     alert.addAction(addAction)
     alert.addAction(cancelAction)
