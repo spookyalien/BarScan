@@ -45,7 +45,7 @@ struct ContentView: View
                     Button(action: {
                         input_alert { entered_text in
                                 if let entered_text = entered_text {
-                                    if (!label_arr.contains(entered_text)) {
+                                    if (!label_arr.contains(entered_text.uppercased())) {
                                         selected_text = entered_text.uppercased()
                                         barcode = gen_barcode(from: selected_text)
                                         label_arr.append(selected_text)
@@ -56,7 +56,7 @@ struct ContentView: View
                     }
                     ) {
                         Text("+")
-                            .font(.headline)
+                            .font(.title)
                             .frame(width: 50)
                             .frame(height: 20)
                             .padding(10)
@@ -113,6 +113,7 @@ struct ContentView: View
                             .resizable()
                             .scaledToFit()
                             .scaleEffect(scale_effect)
+                            .frame(height: 120)
                     }
                 
                 }

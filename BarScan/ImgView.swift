@@ -136,13 +136,17 @@ struct img_capture: UIViewControllerRepresentable
                             processed_input.removeLast()
                             processed_input += "1"
                         }
-                        // Accounts for issue of backroom letter O being mistaken as 0
+                        // Accounts for issue of backroom letter O being mistaken as 0 or I as 1
                         else if processed_input.range(of: "^\\d{2}[A-Za-z]\\d{6}$", options: .regularExpression, range: nil, locale: nil) != nil {
                             // Set to where O is in backroom location barcode == 5
-                            let back_loc = processed_input.index(processed_input.startIndex, offsetBy: 5)
+                            let loc_o = processed_input.index(processed_input.startIndex, offsetBy: 6)
+                            let loc_i = processed_input.index(processed_input.startIndex, offsetBy: 6)
                             
-                            if (processed_input[back_loc] == "0") {
-                                processed_input.replaceSubrange(back_loc...back_loc, with: "O")
+                            if (processed_input[loc_o] == "0") {
+                                processed_input.replaceSubrange(loc_o...loc_o, with: "O")
+                            }
+                            else if (processed_input[loc_i] == "1") {
+                                processed_input.replaceSubrange(loc_i...loc_i, with: "I")
                             }
                         }
                         // Accounts for issue of Backroom letter B being an 8 (processed_input is not split)
