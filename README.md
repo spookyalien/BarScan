@@ -12,7 +12,9 @@ BarScan uses machine learning vision to recognize the text on the photo taken an
 
 TODO
 ----
-- Custom regex for user
-- Improve GUI for user friendliness
+- Custom regex input
+- Improve camera GUI
+- Reduce amount of user interaction for desired result
+- Custom AI for improved recognition
 
 
